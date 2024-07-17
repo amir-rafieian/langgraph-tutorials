@@ -1,0 +1,30 @@
+# venvs
+.venv/
+env/
+venv/
+.env
+.python-version
+.env_dev
+
+# mac
+.DS_Store
+
+# editors
+.vscode
+.idea
+
+
+# secrets
+service_account_credentials.json
+
+# python
+*__pycache__
+*.egg-info
+
+
+# DS and data related
+*.ipynb_checkpoints
+*.csv
+*.stats
+*.pkl
+*.dat
