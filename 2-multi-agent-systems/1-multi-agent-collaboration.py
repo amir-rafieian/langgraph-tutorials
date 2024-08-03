@@ -5,6 +5,8 @@ import getpass
 import os
 from dotenv import load_dotenv
 from IPython.display import Image, display
+from typing import Annotated
+
 
 from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -13,6 +15,9 @@ from  langchain_openai import ChatOpenAI
 
 from langgraph.graph import END, StateGraph, START
 
+from langchain_community.tools.tavily_search import TavilySearchResults
+from langchain_core.tools import tool
+from langchain_experimental.utilities import PythonREPL
 
 # =============================================================================
 # Load env variables
@@ -58,11 +63,31 @@ def create_agent(llm, tools, system_message: str):
 # =============================================================================
 # Define Tools
 # =============================================================================
+# Search tool
+tavily_tool = TavilySearchResults(max_results=5)
 
 
+# python code executer tool
+# Warning: This executes code locally, which can be unsafe when not sandboxed
+repl = PythonREPL()
+
+@tool
+def python_repl(code: Annotated[str, "The python code to execute to generate the chart."]):
+    """Use this to execute python code. If you want to see the output of a variable, you
+    should print it out with print(...). This is visible to the user.
+    """
+    try:
+        result = repl.run(code)
+    except BaseException as e:
+        return "Failed to execute. error: {}".format(repr(e))
+    
+    result_str = "Successfully executed:\n```python\n{}\n```\nStdout: {}".format(code, result)
+    return (result_str+"\n\nIf you have completed all tasks, respond with FINAL ANSWER.")
 
 
-
+# =============================================================================
+# Create Graph
+# =============================================================================
 
 
 
