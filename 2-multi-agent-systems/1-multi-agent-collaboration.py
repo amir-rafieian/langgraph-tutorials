@@ -5,8 +5,10 @@ import getpass
 import os
 from dotenv import load_dotenv
 from IPython.display import Image, display
-from typing import Annotated
+from typing import Annotated, Sequence, TypedDict
 
+
+import operator
 
 from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
@@ -86,17 +88,28 @@ def python_repl(code: Annotated[str, "The python code to execute to generate the
 
 
 # =============================================================================
-# Create Graph
 # =============================================================================
+# # Create Graph
+# =============================================================================
+# =============================================================================
+# Now that we've defined our tools and made some helper functions, will create the 
+# individual agents below and tell them how to talk to each other using LangGraph.
 
+# =============================================================================
+# Define State
+# =============================================================================
+# We first define the state of the graph. This will just a list of messages,
+# along with a key to track the most recent sender
 
+# This defines the object that is passed between each node
+# in the graph. We will create different nodes for each agent and tool
+class AgentState(TypedDict):
+    messages: Annotated[Sequence[BaseMessage], operator.add]
+    sender: str
 
-
-
-
-
-
-
+# =============================================================================
+# Define Agent Nodes
+# =============================================================================
 
 
 
