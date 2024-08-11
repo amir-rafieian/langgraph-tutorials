@@ -10,7 +10,7 @@ from typing import Annotated, Sequence, TypedDict
 
 import operator
 
-from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage
+from langchain_core.messages import BaseMessage, HumanMessage, ToolMessage, AIMessage
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from  langchain_openai import ChatOpenAI
@@ -20,6 +20,8 @@ from langgraph.graph import END, StateGraph, START
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_core.tools import tool
 from langchain_experimental.utilities import PythonREPL
+
+import functools  # The functools module is for higher-order functions: functions that act on or return other functions.
 
 # =============================================================================
 # Load env variables
@@ -110,10 +112,44 @@ class AgentState(TypedDict):
 # =============================================================================
 # Define Agent Nodes
 # =============================================================================
+llm = ChatOpenAI(model="gpt-4o-mini")
 
 
+# Helper function to create a node for a given agent
+def agent_node(state, agent, name):
+    result = agent.invoke(state)
+    
+    # We convert the agent output into a format that is suitable to append to the global state
+    if isinstance(result, ToolMessage):
+        pass
+    else:
+        result = AIMessage(**result.dict(exclude={'type', 'name'}), name = name)
+        
+    return {'messages':[result],
+            'sender': name, # Since we have a strict workflow, we can track the sender so we know who to pass to next.
+            }
+
+# Research agent & node
+research_agent = create_agent(llm=llm,
+                              tools=[tavily_tool],
+                              system_message= "You should provide accurate data for the chart_generator to use")
+
+research_node = functools.partial(agent_node, agent=research_agent, name="Researcher")
+    
 
 
+# chart_generator agent & node
+chart_agent = create_agent(
+    llm,
+    [python_repl],
+    system_message="Any charts you display will be visible by the user.",
+)
+chart_node = functools.partial(agent_node, agent=chart_agent, name="chart_generator")
+
+
+# =============================================================================
+# Define Tool Node
+# =============================================================================
 
 
 
