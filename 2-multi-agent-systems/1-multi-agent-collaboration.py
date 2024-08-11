@@ -5,7 +5,7 @@ import getpass
 import os
 from dotenv import load_dotenv
 from IPython.display import Image, display
-from typing import Annotated, Sequence, TypedDict
+from typing import Annotated, Sequence, TypedDict, Literal
 
 
 import operator
@@ -22,6 +22,9 @@ from langchain_core.tools import tool
 from langchain_experimental.utilities import PythonREPL
 
 import functools  # The functools module is for higher-order functions: functions that act on or return other functions.
+
+
+from langgraph.prebuilt import ToolNode
 
 # =============================================================================
 # Load env variables
@@ -150,11 +153,34 @@ chart_node = functools.partial(agent_node, agent=chart_agent, name="chart_genera
 # =============================================================================
 # Define Tool Node
 # =============================================================================
+tools = [tavily_tool, python_repl]
+tool_node = ToolNode(tools)
 
 
+# =============================================================================
+# Define Edge Logic
+# =============================================================================
+# We can define some of the edge logic that is needed to decide what to do based on results of the agents
 
 
+# Either agent can decide to end
+def router(state) -> Literal['call_tool', '__end__', 'continue']:
+    # this is the router
+    messages = state['messages']
+    last_message = messages[-1]
+    if last_message.tool_calls:
+        return 'call_tool'
+    
+    if 'FINAL ANSWER' in last_message.content:
+        # Any agent decided the work is done
+        return "__end__"
+    
+    return 'continue'
 
+
+# =============================================================================
+# Define the Graph
+# =============================================================================
 
 
 
