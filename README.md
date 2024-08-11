@@ -35,8 +35,9 @@ Copy .env_template to .env and enter your API keys, or enter the Keys in the CLI
 
 
 ## Contact Me
-[![](https://content.linkedin.com/content/dam/brand/site/img/logo/do/do-approved-assets.png)](https://www.linkedin.com/in/amir-rafieian/)
-
+<a href="https://www.linkedin.com/in/amir-rafieian/">
+    <img src="https://content.linkedin.com/content/dam/brand/site/img/logo/do/do-approved-assets.png" alt="LinkedIn Profile" style="width:150px;">
+</a>
 
 
 
