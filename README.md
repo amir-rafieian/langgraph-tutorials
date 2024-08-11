@@ -3,8 +3,8 @@
 This repo is contains samples codes & projects based on Langgraph official documents.
 
 ## Directories
-+ quick-start: A chatbot graph with tool & memory
-+ multi-agent-systems: Multi-agent Collaboration/Supervision/Hierarchical Teams
++ **quick-start:** A chatbot graph with tool & memory
++ **multi-agent-systems:** Multi-agent Collaboration/Supervision/Hierarchical Teams
 
 
 
