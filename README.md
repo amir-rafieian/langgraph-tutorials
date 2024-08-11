@@ -2,13 +2,12 @@
 
 This repo is contains samples codes & projects based on Langgraph official documents.
 
-<br />
+
 ## Directories
 + **quick-start:** A chatbot graph with tool & memory
 + **multi-agent-systems:** Multi-agent Collaboration/Supervision/Hierarchical Teams
 
 
-<br />
 ## Environment Setup
 Create a Python 3.11.9 Environment:
    ```bash
