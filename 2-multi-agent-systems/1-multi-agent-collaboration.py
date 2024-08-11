@@ -181,10 +181,65 @@ def router(state) -> Literal['call_tool', '__end__', 'continue']:
 # =============================================================================
 # Define the Graph
 # =============================================================================
+workflow = StateGraph(AgentState)
+
+workflow.add_node("Researcher", research_node)
+workflow.add_node("chart_generator", chart_node)
+workflow.add_node("call_tool", tool_node)
+
+
+workflow.add_conditional_edges(
+    "Researcher",
+    router,
+    {"continue": "chart_generator", "call_tool": "call_tool", "__end__": END},
+)
+
+workflow.add_conditional_edges(
+    "chart_generator",
+    router,
+    {"continue": "Researcher", "call_tool": "call_tool", "__end__": END},
+)
+
+workflow.add_conditional_edges(
+    "call_tool",
+    # Each agent node updates the 'sender' field
+    # the tool calling node does not, meaning
+    # this edge will route back to the original agent
+    # who invoked the tool
+    lambda x: x["sender"],
+    {
+        "Researcher": "Researcher",
+        "chart_generator": "chart_generator",
+    },
+)
+workflow.add_edge(START, "Researcher")
+graph = workflow.compile()
+
+
+# =============================================================================
+# Draw the graph
+# =============================================================================
+# print(graph.get_graph().draw_mermaid())
+# we can copy the output of this print command, then go to mermaid.live and paste
+# it there to visualize it.
+
+# or generate the graph in ascii form:
+graph.get_graph().print_ascii()
+
+
+# Visualize the graph in the ipython console:
+# try:
+#     Image(graph.get_graph().draw_mermaid_png())
+# except:
+#     # display(Image(graph.get_graph().draw_mermaid_png()))
+#     # or it may need extra dependencies
+#     pass
 
 
 
-
+# =============================================================================
+# Invoke
+# =============================================================================
 
 
 
