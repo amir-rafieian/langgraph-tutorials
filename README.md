@@ -2,11 +2,13 @@
 
 This repo is contains samples codes & projects based on Langgraph official documents.
 
+&nbsp;
 
 ## Directories
 + **quick-start:** A chatbot graph with tool & memory
 + **multi-agent-systems:** Multi-agent Collaboration/Supervision/Hierarchical Teams
 
+&nbsp;
 
 ## Environment Setup
 Create a Python 3.11.9 Environment:
@@ -32,6 +34,7 @@ $pip install -r requirements.txt
 
 Copy .env_template to .env and enter your API keys, or enter the Keys in the CLI upon running the scripts
 
+&nbsp;
 
 ## Contact Me
 <a href="https://www.linkedin.com/in/amir-rafieian/">
