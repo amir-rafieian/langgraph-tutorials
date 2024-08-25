@@ -27,6 +27,7 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 
 from langchain.agents import AgentExecutor, create_openai_tools_agent, create_react_agent
 
+from langchain_core.output_parsers.openai_functions import JsonOutputFunctionsParser
 # =============================================================================
 # Load env variables
 # =============================================================================
@@ -105,6 +106,111 @@ def agent_node(state, agent, name):
 # =============================================================================
 # Create Agent Supervisor
 # =============================================================================
+# We use function calling to choose the next worker node OR finish processing.
+# Our team supervisor is an LLM node. It just picks the next agent to process
+# and decides when the work is completed
+
+members = ['Researcher', 'Coder']
+system_prompt = (
+    "You are a supervisor tasked with managing a conversation between the"
+    " following workers: {members}. Given the following user request,"
+    " respond with the worker to act next. Each worker will perform a"
+    " task and respond with their results and status. When finished,"
+    " respond with FINISH."
+    )
+
+options = ['FINISH'] + members
+
+#Parsing output using openai function calling:
+function_def = {
+    "name" : "route",
+    "description": "Select the next role",
+    "parameters": {
+        "title": "routeSchema",
+        "type": "object",
+        "properties": {
+            "next":{
+                "title": "Next",
+                "anyOf":[{"enum": options}]
+                }
+            },
+        "required":["next"]
+        }
+    }
+
+prompt = ChatPromptTemplate.from_messages(
+    [
+         ("system", system_prompt),
+         MessagesPlaceholder(variable_name="messages"),
+         ("system",
+          "Given the conversation above, who should act next?"
+          "Or should we FINISH? Select one of: {options}"
+         )
+     ]
+    )
+prompt = prompt.partial(options=str(options), members=", ".join(members))
+
+llm = ChatOpenAI(model = 'gpt-4o-mini')
+
+supervisor_chain = (
+    prompt
+    | llm.bind_functions(functions=[function_def], function_call="route")
+    | JsonOutputFunctionsParser()
+    )
+
+
+# =============================================================================
+# Construct Graph
+# =============================================================================
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
