@@ -28,6 +28,11 @@ from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain.agents import AgentExecutor, create_openai_tools_agent, create_react_agent
 
 from langchain_core.output_parsers.openai_functions import JsonOutputFunctionsParser
+
+import functools  # The functools module is for higher-order functions: functions that act on or return other functions.
+import operator
+
+from langgraph.graph import END, StateGraph, START
 # =============================================================================
 # Load env variables
 # =============================================================================
@@ -162,18 +167,83 @@ supervisor_chain = (
 # =============================================================================
 # Construct Graph
 # =============================================================================
+# The agent state is the input to each node in the graph
+class AgentState(TypedDict):
+    # The annotation tells the graph that new messages will always
+    # be added to the current states
+    messages: Annotated[Sequence[BaseMessage], operator.add]
+    # The 'next' field indicates where to route to next
+    next:str
+
+
+research_agent = create_agent(llm=llm, tools=[tavily_tool], system_prompt="You are a web researcher.")
+research_node = functools.partial(agent_node, agent=research_agent, name = "Researcher")
+
+
+# NOTE: THIS PERFORMS ARBITRARY CODE EXECUTION. PROCEED WITH CAUTION OR USE SANDBOX
+code_agent = create_agent(llm=llm, tools=[python_repl_tool], system_prompt="You may generate safe python code to analyze data and generate charts using matplotlib or seaborn.")
+code_node = functools.partial(agent_node, agent=code_agent, name = "Coder")
+
+# Create the graph and add nodes
+workflow = StateGraph(AgentState)
+workflow.add_node('Researcher', research_node)
+workflow.add_node('Coder', code_node)
+workflow.add_node('Supervisor', supervisor_chain)
+
+# Add the edges
+for member in members:
+    # We want our workers to ALWAYS "report back" to the supervisor when done
+    workflow.add_edge(start_key=member, end_key='Supervisor')
+
+# The supervisor populates the "next" field in the graph state
+# which routes to a node or finishes
+conditional_map = {k: k for k in members}
+conditional_map["FINISH"] = END
+workflow.add_conditional_edges(source="Supervisor", path= lambda x: x['next'],path_map= conditional_map)
+
+# Finally, add entrypoint
+workflow.add_edge(START, "Supervisor")
+
+graph = workflow.compile()
+
+
+# =============================================================================
+# Draw the graph
+# =============================================================================
+# print(graph.get_graph().draw_mermaid())
+# we can copy the output of this print command, then go to mermaid.live and paste
+# it there to visualize it.
+
+# or generate the graph in ascii form:
+graph.get_graph().print_ascii()
+
+
+# Visualize the graph in the ipython console:
+# try:
+#     Image(graph.get_graph().draw_mermaid_png())
+# except:
+#     # display(Image(graph.get_graph().draw_mermaid_png()))
+#     # or it may need extra dependencies
+#     pass
+
+# =============================================================================
+# Invoke-1
+# =============================================================================
+for s in graph.stream({"messages":[HumanMessage(content="Code hello world in python and print it to the terminal")]}):
+    if "__end__" not in s:
+        print(s)
+        print("-----")
 
 
 
-
-
-
-
-
-
-
-
-
+# =============================================================================
+# Invoke-2
+# =============================================================================
+for s in graph.stream({"messages":[HumanMessage(content="Write a brief research report on pikas.")]},
+                      {"recursion_limit":100}):
+    if "__end__" not in s:
+        print(s)
+        print("-----")
 
 
 
