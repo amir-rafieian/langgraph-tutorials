@@ -229,7 +229,7 @@ graph.get_graph().print_ascii()
 
 # Visualize the graph in the ipython console:
 # try:
-#     Image(graph.get_graph().draw_mermaid_png())
+#     Image(graph.get_graph(xray=True).draw_mermaid_png())
 # except:
 #     # display(Image(graph.get_graph().draw_mermaid_png()))
 #     # or it may need extra dependencies
