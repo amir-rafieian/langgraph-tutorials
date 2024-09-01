@@ -60,7 +60,8 @@ python_repl_tool = PythonREPLTool()
 # =============================================================================
 # Helper Utilities
 # =============================================================================
-# Define a helper function below, which make it easier to add new agent worker nodes
+# Define a helper function below, which make it easier to add new agent worker nodes.
+# instead of this function, we can use create_react_agent. refer to 3-multi-agent-hierarchical-supervision.py.
 def create_agent(llm:ChatOpenAI, tools:list, system_prompt:str):
     """
     Creates an agent using the specified language model, tools, and system prompt.

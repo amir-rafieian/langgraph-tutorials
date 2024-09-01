@@ -181,32 +181,6 @@ def agent_node(state, agent, name):
     return {"messages": [HumanMessage(content=result["messages"][-1].content, name=name)]}
 
 
-
-# def create_agent(
-#     llm: ChatOpenAI,
-#     tools: list,
-#     system_prompt: str,
-# ) -> str:
-#     """Create a function-calling agent and add it to the graph."""
-#     system_prompt += "\nWork autonomously according to your specialty, using the tools available to you."
-#     " Do not ask for clarification."
-#     " Your other team members (and other teams) will collaborate with you with their own specialties."
-#     " You are chosen for a reason! You are one of the following team members: {team_members}."
-#     prompt = ChatPromptTemplate.from_messages(
-#         [
-#             (
-#                 "system",
-#                 system_prompt,
-#             ),
-#             MessagesPlaceholder(variable_name="messages"),
-#             MessagesPlaceholder(variable_name="agent_scratchpad"),
-#         ]
-#     )
-#     agent = create_openai_functions_agent(llm, tools, prompt)
-#     executor = AgentExecutor(agent=agent, tools=tools)
-#     return executor
-
-
 def create_team_supervisor(llm: ChatOpenAI, system_prompt, members) -> str:
     """An LLM-based router."""
     options = ["FINISH"] + members
@@ -473,6 +447,106 @@ for s in authoring_chain.stream(
     if "__end__" not in s:
         print(s)
         print("---")
+
+
+# =============================================================================
+# =============================================================================
+# # Add Layers
+# =============================================================================
+# =============================================================================
+# In this design, we are enforcing a top-down planning policy. 
+# We've created two graphs already, but we have to decide how to route work 
+# between the two.
+
+# We'll create a third graph to orchestrate the previous two, and add some 
+# connectors to define how this top-level state is shared between the different graphs.
+
+llm = ChatOpenAI(model="gpt-4o")
+
+
+supervisor_node = create_team_supervisor(
+    llm,
+    "You are a supervisor tasked with managing a conversation between the"
+    " following teams: {team_members}. Given the following user request,"
+    " respond with the worker to act next. Each worker will perform a"
+    " task and respond with their results and status. When finished,"
+    " respond with FINISH.",
+    ["ResearchTeam", "PaperWritingTeam"],
+)
+
+
+# Top-level graph state
+class State(TypedDict):
+    messages: Annotated[List[BaseMessage], operator.add]
+    next: str
+    
+
+def get_last_message(state: State) -> str:
+    return state["messages"][-1].content
+
+
+def join_graph(response: dict):
+    return {"messages": [response["messages"][-1]]}
+
+
+
+# Define the graph.
+super_graph = StateGraph(State)
+
+# First add the nodes, which will do the work
+super_graph.add_node("ResearchTeam", get_last_message | research_chain | join_graph)
+super_graph.add_node("PaperWritingTeam", get_last_message | authoring_chain | join_graph)
+
+super_graph.add_node("supervisor", supervisor_node)
+
+# Define the graph connections, which controls how the logic
+# propagates through the program
+super_graph.add_edge("ResearchTeam", "supervisor")
+super_graph.add_edge("PaperWritingTeam", "supervisor")
+super_graph.add_conditional_edges(
+    "supervisor",
+    lambda x: x["next"],
+    {
+        "PaperWritingTeam": "PaperWritingTeam",
+        "ResearchTeam": "ResearchTeam",
+        "FINISH": END,
+    },
+)
+super_graph.add_edge(START, "supervisor")
+super_graph = super_graph.compile()
+
+# display (cannot use the xray=True option here)
+Image(super_graph.get_graph().draw_mermaid_png())
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
