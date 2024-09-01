@@ -519,7 +519,20 @@ super_graph = super_graph.compile()
 Image(super_graph.get_graph().draw_mermaid_png())
 
 
-
+for s in super_graph.stream(
+    {
+        "messages": [
+            HumanMessage(
+                content="Write a brief research report on the North American sturgeon. Include a chart."
+            )
+        ],
+    },
+    {"recursion_limit": 150},
+):
+    if "__end__" not in s:
+        print(s)
+        print("---")
+        
 
 
 
