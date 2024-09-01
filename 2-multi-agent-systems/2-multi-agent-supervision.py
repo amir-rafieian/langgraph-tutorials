@@ -15,6 +15,8 @@ import os
 from dotenv import load_dotenv
 from IPython.display import Image, display
 from typing import Annotated, Sequence, TypedDict, Literal
+from pydantic import BaseModel
+
 
 from langchain_community.tools.tavily_search import TavilySearchResults
 from langchain_experimental.tools import PythonREPLTool
@@ -31,6 +33,8 @@ from langchain_core.output_parsers.openai_functions import JsonOutputFunctionsPa
 
 import functools  # The functools module is for higher-order functions: functions that act on or return other functions.
 import operator
+
+from langgraph.prebuilt import create_react_agent
 
 from langgraph.graph import END, StateGraph, START
 # =============================================================================
@@ -60,53 +64,12 @@ python_repl_tool = PythonREPLTool()
 # =============================================================================
 # Helper Utilities
 # =============================================================================
-# Define a helper function below, which make it easier to add new agent worker nodes
-def create_agent(llm:ChatOpenAI, tools:list, system_prompt:str):
-    """
-    Creates an agent using the specified language model, tools, and system prompt.
-
-    This function initializes an agent by creating a prompt template with the system's instructions,
-    and placeholders for incoming messages and the agent's scratchpad. It then constructs the agent
-    using the provided language model and tools, wrapping it within an executor for execution.
-    each worker node will be given a name and some tools.
-
-    Args:
-        llm (ChatOpenAI): The language model to be used by the agent.
-        tools (list): A list of tools that the agent can use to perform its tasks.
-        system_prompt (str): A string that defines the initial system prompt for the agent, 
-                             setting the context or behavior for the conversation.
-
-    Returns:
-        AgentExecutor: An executor that manages the agent's operation, enabling it to process 
-                       incoming messages and execute tasks with the provided tools.
-    """
-    # prompt = ChatPromptTemplate.from_messages(
-    # [
-    #     ("system", "You are a helpful assistant"),
-    #     MessagesPlaceholder("chat_history", optional=True),
-    #     ("human", "{input}"),
-    #     MessagesPlaceholder("agent_scratchpad"),
-    # ]
-    # )
-    
-    prompt = ChatPromptTemplate.from_messages(
-        [
-            ("system", system_prompt),
-            MessagesPlaceholder(variable_name="messages"),
-            MessagesPlaceholder(variable_name="agent_scratchpad")
-        ]
-    )
-    
-    agent = create_openai_tools_agent(llm, tools, prompt)   #create_react_agent(llm, tools, prompt) )
-    executor = AgentExecutor(agent=agent, tools=tools)
-    return executor
-
-
 # Define a function to be used as nodes, and convert agent response to human message.
 # we will add this human message to the global state of the graph
 def agent_node(state, agent, name):
     result = agent.invoke(state)
-    return {'messages': [HumanMessage(content=result['output'], name=name)]}
+    return {"messages": [HumanMessage(content=result["messages"][-1].content, name=name)]}
+
 
 # =============================================================================
 # Create Agent Supervisor
@@ -126,22 +89,9 @@ system_prompt = (
 
 options = ['FINISH'] + members
 
-#Parsing output using openai function calling:
-function_def = {
-    "name" : "route",
-    "description": "Select the next role",
-    "parameters": {
-        "title": "routeSchema",
-        "type": "object",
-        "properties": {
-            "next":{
-                "title": "Next",
-                "anyOf":[{"enum": options}]
-                }
-            },
-        "required":["next"]
-        }
-    }
+
+class routeResponse(BaseModel):
+    next: Literal[*options]
 
 prompt = ChatPromptTemplate.from_messages(
     [
@@ -157,11 +107,12 @@ prompt = prompt.partial(options=str(options), members=", ".join(members))
 
 llm = ChatOpenAI(model = 'gpt-4o-mini')
 
-supervisor_chain = (
-    prompt
-    | llm.bind_functions(functions=[function_def], function_call="route")
-    | JsonOutputFunctionsParser()
+def supervisor_agent(state):
+    supervisor_chain = (
+        prompt
+        | llm.with_structured_output(routeResponse)
     )
+    return supervisor_chain.invoke(state)
 
 
 # =============================================================================
@@ -176,19 +127,19 @@ class AgentState(TypedDict):
     next:str
 
 
-research_agent = create_agent(llm=llm, tools=[tavily_tool], system_prompt="You are a web researcher.")
-research_node = functools.partial(agent_node, agent=research_agent, name = "Researcher")
+research_agent = create_react_agent(llm, tools=[tavily_tool])
+research_node = functools.partial(agent_node, agent=research_agent, name="Researcher")
 
 
 # NOTE: THIS PERFORMS ARBITRARY CODE EXECUTION. PROCEED WITH CAUTION OR USE SANDBOX
-code_agent = create_agent(llm=llm, tools=[python_repl_tool], system_prompt="You may generate safe python code to analyze data and generate charts using matplotlib or seaborn.")
-code_node = functools.partial(agent_node, agent=code_agent, name = "Coder")
+code_agent = create_react_agent(llm, tools=[python_repl_tool])
+code_node = functools.partial(agent_node, agent=code_agent, name="Coder")
 
 # Create the graph and add nodes
 workflow = StateGraph(AgentState)
 workflow.add_node('Researcher', research_node)
 workflow.add_node('Coder', code_node)
-workflow.add_node('Supervisor', supervisor_chain)
+workflow.add_node('Supervisor', supervisor_agent)
 
 # Add the edges
 for member in members:
@@ -220,7 +171,7 @@ graph.get_graph().print_ascii()
 
 # Visualize the graph in the ipython console:
 # try:
-#     Image(graph.get_graph().draw_mermaid_png())
+#     Image(graph.get_graph(xray=True).draw_mermaid_png())
 # except:
 #     # display(Image(graph.get_graph().draw_mermaid_png()))
 #     # or it may need extra dependencies

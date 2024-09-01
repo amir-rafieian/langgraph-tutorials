@@ -44,7 +44,8 @@ _set_if_undefined("TAVILY_API_KEY")
 # =============================================================================
 # this helper functions will create agents. These agents will then be nodes in
 # the graph.
-
+# instead of this function, we can use create_react_agent. refer to 2-multi-agent-supervision.py
+# and3-multi-agent-hierarchical-supervision.py.
 def create_agent(llm, tools, system_message: str):
     """Create an agent"""
     prompt = ChatPromptTemplate.from_messages(
@@ -229,7 +230,7 @@ graph.get_graph().print_ascii()
 
 # Visualize the graph in the ipython console:
 # try:
-#     Image(graph.get_graph().draw_mermaid_png())
+#     Image(graph.get_graph(xray=True).draw_mermaid_png())
 # except:
 #     # display(Image(graph.get_graph().draw_mermaid_png()))
 #     # or it may need extra dependencies
