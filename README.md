@@ -7,6 +7,7 @@ This repo is contains samples codes & projects based on Langgraph official docum
 ## Directories
 + **quick-start:** A chatbot graph with tool & memory
 + **multi-agent-systems:** Multi-agent Collaboration/Supervision/Hierarchical Teams
++ **rag:** Adaptive/Agentic/Corrective/Self RAG
 
 &nbsp;
 
