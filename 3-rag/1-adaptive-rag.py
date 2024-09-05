@@ -51,7 +51,7 @@ _set_if_undefined("TAVILY_API_KEY")
 
 
 # =============================================================================
-# Create Embedding & Chrome index & Retreiver
+# Create Embedding & Chrome index & Retreiver (Here you may get write access error, you can switch to proper vector databases such as pinecone)
 # =============================================================================
 embd = OpenAIEmbeddings()
 
